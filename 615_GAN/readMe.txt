@@ -1,0 +1,1 @@
+To run, make sure all files are in the same folder. Don't forget to add the spriteArray.obj file. Then just run main.py
