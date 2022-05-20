@@ -35,7 +35,7 @@ def ReluGAN(showEachEpoch):
     numClasses = 1  # legacy from 615. Allows you to train multiple GANs for different classes
     numFeatures = 12288  # number of pixels (features) in the flattened picture
     originalShape = (64, 64, 3)  # shape of the picture
-    maxEpochs = 1000  # 30  # number of epochs to run
+    maxEpochs = 30   # number of epochs to run
 
     print("Reading training data. Please wait...")
     trainArr = utils.restorePickleArr()  # Get training data from pickle object
