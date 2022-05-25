@@ -30,12 +30,12 @@ def combineRealandFake(arr1, arr2):
 
 
 def ReluGAN(showEachEpoch):
-    np.random.seed(0)
+    # np.random.seed(0)
     batchSize = 100  # batch size for stochastic gradient descent
     numClasses = 1  # legacy from 615. Allows you to train multiple GANs for different classes
     numFeatures = 12288  # number of pixels (features) in the flattened picture
     originalShape = (64, 64, 3)  # shape of the picture
-    maxEpochs = 10000  # number of epochs to run
+    maxEpochs = 10   # number of epochs to run
 
     print("Reading training data. Please wait...")
     trainArr = utils.restorePickleArr()  # Get training data from pickle object
@@ -50,17 +50,21 @@ def ReluGAN(showEachEpoch):
     print("\nTraining...")
     for i in range(numClasses):  # for creating multiple GANs for multiple classes
         print("Index " + str(i) + "...")
-        learningRate_G = 0.00001  # rate at which we update the weights in the generator
-        learningRate_D = 0.00001  # rate at which we update the weights in the discriminator
+        learningRate_G = 0.0001  # rate at which we update the weights in the generator
+        learningRate_D = 0.0001  # rate at which we update the weights in the discriminator
 
         # Define the model
         # Generator
-        FC_G = FullyConnected(numFeatures, numFeatures, learningRate_G)  # layer where learning actually happens
-        relu_G = ReLu()  # activation layer. ReLu is fast and non-linear which makes it popular
+        FC_G1 = FullyConnected(numFeatures, numFeatures*2, learningRate_G)  # layer where learning actually happens
+        relu_G1 = ReLu()  # activation layer. ReLu is fast and non-linear which makes it popular
+        FC_G2 = FullyConnected(numFeatures*2, numFeatures, learningRate_G)  # layer where learning actually happens
+        relu_G2 = ReLu()  # activation layer. ReLu is fast and non-linear which makes it popular
         objective_G = Generator()  # Output/objective layer. It's mostly used for calculating loss and gradients
 
         # Discriminator
-        FC_D = FullyConnected(numFeatures, 1, learningRate_D)  # layer where learning actually happens
+        FC_D1 = FullyConnected(numFeatures, numFeatures*2, learningRate_D)  # layer where learning actually happens
+        relu_D1 = ReLu()
+        FC_D2 = FullyConnected(numFeatures*2, 1, learningRate_D)  # layer where learning actually happens
         sig_D = Sigmoid()  # Activation layer. Forces values between 0 and 1
         LL_D = LogLoss(targetArr_d)  # Output.objective layer. It's mostly used for calculating loss and gradients
 
@@ -79,50 +83,62 @@ def ReluGAN(showEachEpoch):
             # Fake input
             # Generate random data that has the same mean and SD as the training data
             input_f = np.random.normal(mu, sigma, size=(batchSize, numFeatures))
-
             # Real input
             input_r = createStochasticBatch(batchArr, batchSize)
 
             # Forward Prop
-            X_f = FC_G.forwardPropagate(input_f)
-            X_f = relu_G.forwardPropagate(X_f)  # Generated fake data
+            X_f = FC_G1.forwardPropagate(input_f)
+            X_f = relu_G1.forwardPropagate(X_f)
+            X_f = FC_G2.forwardPropagate(X_f)
+            X_f = relu_G2.forwardPropagate(X_f)  # Generated fake data
 
             input_d = combineRealandFake(input_r, X_f)
 
-            X_d = FC_D.forwardPropagate(input_d)
+            X_d = FC_D1.forwardPropagate(input_d)
+            X_d = relu_D1.forwardPropagate(X_d)
+            X_d = FC_D2.forwardPropagate(X_d)
             X_d = sig_D.forwardPropagate(X_d)  # prediction by the discriminator (real=1 or fake=0)
             J_d = LL_D.eval(X_d)  # print this to see the loss for the discriminator
 
             # back prop discriminator
             grad = LL_D.gradient(X_d)  # calculate the gradient of discriminator
             grad = sig_D.backwardPropagate(grad)  # account for the activation layer changes
-            FC_D.backwardPropagate(grad, epoch)  # update weights and biases for discriminator
+            grad = FC_D2.backwardPropagate(grad, epoch)
+            grad = relu_D1.backwardPropagate(grad)
+            FC_D1.backwardPropagate(grad, epoch)  # update weights and biases for discriminator
 
             # forward prop again b/c the generator should learn based on the updated discriminator, not the old one
-            X_d = FC_D.forwardPropagate(X_f)  # This time only forward prop the fake data from earlier
-            X_d = sig_D.forwardPropagate(X_d)  # Prediction from discriminator
+            X_d = FC_D1.forwardPropagate(X_f)  # This time only forward prop the fake data from earlier
+            X_d = relu_D1.forwardPropagate(X_d)
+            X_d = FC_D2.forwardPropagate(X_d)
+            X_d = sig_D.forwardPropagate(X_d)
             J_g = objective_G.eval(X_d)  # print this to see the loss for the generator
 
             # back again
             grad = objective_G.gradient(X_d)  # calculate the gradient of discriminator
             grad = sig_D.backwardPropagate(grad)  # account for the activation layer changes
-            grad = FC_D.backwardPropagateNoUpdate(grad)  # account for the FC layer in discriminator but dont update it
-            grad = relu_G.backwardPropagate(grad)  # account for the activation layer changes
-            FC_G.backwardPropagate(grad, epoch)  # update weights and biases in fully connected layer for generator
+            grad = FC_D2.backwardPropagateNoUpdate(grad)
+            grad = relu_D1.backwardPropagate(grad)
+            grad = FC_D1.backwardPropagateNoUpdate(grad)  # account for the FC layer in discriminator but dont update it
+            grad = relu_G2.backwardPropagate(grad)  # account for the activation layer changes
+            grad = FC_G2.backwardPropagate(grad, epoch)
+            grad = relu_G1.backwardPropagate(grad)  # account for the activation layer changes
+            FC_G1.backwardPropagate(grad, epoch)  # update weights and biases in fully connected layer for generator
 
             epoch += 1
 
-            if showEachEpoch and epoch % 1000 == 0:
+            if showEachEpoch:
                 best_index = np.argmax(X_d, axis=0)  # find index for the best fake image
                 best = X_f[best_index]  # get the data for that image
                 best = best.reshape(originalShape)  # reshape it to the original size
-                utils.arrayToImage(best, epoch)  # show the image (currently also saves the image as Output.png)
+                utils.arrayToImage(best)  # show the image (currently also saves the image as Output.png)
                 # utils.createImage(best, "d" + str(i) + "e" + str(epoch))  # legacy from 615
         if not showEachEpoch:
+            print(X_d)
             best_index = np.argmax(X_d, axis=0)  # find index for the best fake image
             best = X_f[best_index]  # get the data for that image
             best = best.reshape(originalShape)  # reshape it to the original size
-            utils.arrayToImage(best, epoch)  # show the image (currently also saves the image as Output.png)
+            utils.arrayToImage(best)  # show the image (currently also saves the image as Output.png)
             # utils.createImage(best, "d" + str(i) + "e" + str(epoch)) # legacy from 615
 
 

@@ -27,10 +27,10 @@ def imageToCSV():
             f.close()
 
 
-def arrayToImage(sprite):
+def arrayToImage(sprite, number):
     spriteImage = Image.fromarray(sprite.astype(np.uint8))
-    spriteImage.show()
-    spriteImage.save("Output.png")
+    # spriteImage.show()
+    spriteImage.save("output\\Output" + str(number) + ".png")
 
 def createImage(arr, title):
     print("\nShow best image")
