@@ -50,7 +50,7 @@ def generatePickleArr():
     pickle.dump(arr, file_pi)
 
 def saveAsPickle(arr, filename):
-    file_pi = open(filename, 'wb')
+    file_pi = open(filename + ".obj", 'wb')
     pickle.dump(arr, file_pi)
 
 def restorePickleArr():

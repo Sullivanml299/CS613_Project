@@ -35,7 +35,7 @@ def ReluGAN(showEachEpoch):
     numClasses = 1  # legacy from 615. Allows you to train multiple GANs for different classes
     numFeatures = 12288  # number of pixels (features) in the flattened picture
     originalShape = (64, 64, 3)  # shape of the picture
-    maxEpochs = 10000  # number of epochs to run
+    maxEpochs = 50000  # number of epochs to run
 
     print("Reading training data. Please wait...")
     trainArr = utils.restorePickleArr()  # Get training data from pickle object
@@ -118,6 +118,11 @@ def ReluGAN(showEachEpoch):
                 best = best.reshape(originalShape)  # reshape it to the original size
                 utils.arrayToImage(best, epoch)  # show the image (currently also saves the image as Output.png)
                 # utils.createImage(best, "d" + str(i) + "e" + str(epoch))  # legacy from 615
+
+                # Save Layers
+                utils.saveAsPickle(FC_G, "output\\G" + str(epoch))
+                utils.saveAsPickle(FC_D, "output\\D" + str(epoch))
+
         if not showEachEpoch:
             best_index = np.argmax(X_d, axis=0)  # find index for the best fake image
             best = X_f[best_index]  # get the data for that image
