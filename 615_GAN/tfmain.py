@@ -53,11 +53,11 @@ def make_discriminator_model():
     model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same',
                             input_shape=[64, 64, 3]))
     model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
+    # model.add(layers.Dropout(0.3))
 
     model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same'))
     model.add(layers.LeakyReLU())
-    model.add(layers.Dropout(0.3))
+    # model.add(layers.Dropout(0.3))
 
     model.add(layers.Flatten())
     model.add(layers.Dense(1))
@@ -182,7 +182,7 @@ checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
                                  generator=generator,
                                  discriminator=discriminator)
 
-EPOCHS = 1000
+EPOCHS = 100
 noise_dim = 100
 num_examples_to_generate = 16
 
