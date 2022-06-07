@@ -19,26 +19,37 @@ from Convolutional2DTranpose import *
 #
 
 
-
-
-X = np.array([[0.0, 1.0], [2.0, 3.0]])
+# X = np.array([[0.0, 1.0],
+#               [2.0, 3.0]])
+X = np.arange(4.0).reshape(2, 2)
 X_reshape = X.reshape(1, 2, 2, 1)
-K = np.array([[0.0, 1.0], [2.0, 3.0]])
+# X = np.array([[0.0, 1.0, 3.0],
+#               [4.0, 5.0, 6.0],
+#               [7.0, 8.0, 9.0]])
+# X_reshape = X.reshape(1, 3, 3, 1)
+channels = 1
+
 
 model_Conv2D_Transpose = keras.models.Sequential()
-model_Conv2D_Transpose.add(keras.layers.Conv2DTranspose(1, (2, 2), strides=(1, 1), padding='valid', input_shape=(2, 2, 1)))
-w = model_Conv2D_Transpose.layers[0].get_weights()[0].reshape(2,2)
-# w = model_Conv2D_Transpose.layers[0].get_weights()[0].reshape(2,2,2)
+model_Conv2D_Transpose.add(
+    keras.layers.Conv2DTranspose(channels, (2, 2), strides=(1, 1), padding='valid', input_shape=(2, 2, 1)))
+# w = model_Conv2D_Transpose.layers[0].get_weights()[0].reshape(2, 2)
+w = model_Conv2D_Transpose.layers[0].get_weights()[0]
+w = w.reshape(2,2)
+# w = w.reshape(2,2,2)
 print("Keras Weights: \n {}".format(w))
-keras_output = model_Conv2D_Transpose.predict(X_reshape)
-keras_output = keras_output.reshape(3, 3)
-# keras_output = keras_output.reshape(2, 2, 2)
-print("Keras Conv2D: \n {}".format(keras_output))
+print("\n")
 
+keras_output = model_Conv2D_Transpose.predict(X_reshape)
+# keras_output = keras_output.reshape(3, 3)
+# print(keras_output)
+keras_output = keras_output.reshape(3, 3)
+print("Keras Conv2D: \n {}".format(keras_output))
+print("\n")
 
 W = w
-model = Conv2DTranspose(1, W, padding="valid", strides=(1, 1))
+model = Conv2DTranspose(channels, W, padding="valid", strides=(1, 1))
 my_output = model.forwardPropagate(X)
-print("My Conv2D: \n {}".format(my_output))
+print("My Conv2DTranspose: \n {}".format(my_output))
 print("\n")
 

@@ -1,5 +1,6 @@
 from math import floor, ceil
 import numpy as np
+from scipy.sparse import csr_matrix
 
 class Conv2DTranspose():
     def __init__(self, channels, W, padding="same", strides=(1, 1)):
@@ -28,10 +29,55 @@ class Conv2DTranspose():
             output = np.zeros([outputChannels, outputRows, outputCols])
         else:
             output = np.zeros([outputRows, outputCols])
-        print("Output: \n {}".format(output))
+        # print("Output: \n {}".format(output))
+
+        # Generate Sparse Convolutional Matrix
+        matrixShape = (inputCols * inputRows, outputRows * outputCols)
+        print("shape", matrixShape)
+        sparseMatrix = np.zeros(matrixShape)
+        print(sparseMatrix)
+
+        # build kernel vector that will be shifted across the sparse matrix
+        # Note that since this is Transpose, everything is based on the output size
+        numKernelValues = kernelWidth*kernelHeight
+        numZerosBetweenRows = (outputCols - kernelWidth)
+        numRows = kernelHeight - 1
+        kernelVector = np.zeros(numKernelValues + numZerosBetweenRows * numRows)
+        print(kernelVector)
+        for row in range(kernelHeight):
+            start = row * kernelWidth + row * numZerosBetweenRows
+            end = start + kernelWidth
+            # print(start)
+            kernelVector[start:end] = self.W[row]
+            # print(kernelVector)
+
+        # Fill the sparse Matrix
+        numHorizontalStrides = int(outputCols - kernelWidth/self.strides[1])
+
+        h_strides = 0
+        v_strides = 0
+        for i in range(matrixShape[0]):
+            # print("h_strides:", h_strides, "v_strides:", v_strides)
+            start = v_strides * outputCols + h_strides
+            end = start + kernelVector.shape[0]
+            # print("Start:", start, "End:", end)
+            sparseMatrix[i, start:end] = kernelVector
+
+            # update strides
+            h_strides += 1
+            if(h_strides > numHorizontalStrides):
+                h_strides = 0
+                v_strides += 1
+        # print(sparseMatrix)
+
+        w = sparseMatrix #self.kernel2matrix(self.W, (outputRows, outputCols))
+        print("w: \n {}".format(w.shape))
+        # # print("scipy: \n {}".format(csr_matrix(self.W, shape=(outputRows, outputCols)).toarray()))
+        # print("X: \n {}".format(self.X))
+        print("Output: \n {}".format((w.T @ self.X.reshape(-1)).reshape(outputRows, outputCols)))
+
 
         # Calculate the output
-        # TODO: see if we can leverate linear algebra here
         for c in range(outputChannels):
             # print("Channel: \n {}".format(self.W[c, :, :]))
             for i in range(inputRows):
@@ -42,34 +88,24 @@ class Conv2DTranspose():
                     else:
                         out = self.X[i, j] * self.W
                         output[i: i + kernelHeight, j: j + kernelWidth] += out
-            print("Output: \n {}".format(output))
-
-        # Define length of padding
-        p_left, p_right, p_top, p_bottom = self.setPadding()
+            # print("Output: \n {}".format(output))
 
         # Add padding
-        output_padded = output[p_left:output.shape[0]-p_right, p_top:output.shape[0]-p_bottom]
-
-        return(np.array(output_padded))
-
-    def setPadding(self):
         if self.padding == "same":
-            # returns the output with the shape of (input shape)*(stride)
-            p_left = floor((self.W.shape[0] - self.strides[0])/2)
-            p_right = self.W.shape[0] - self.strides[0] - p_left
-            p_top = floor((self.W.shape[1] - self.strides[1])/2)
-            p_bottom = self.W.shape[1] - self.strides[1] - p_left
-        elif self.padding == "valid":
-            # returns the output without any padding
-            p_left = 0
-            p_right = 0
-            p_top = 0
-            p_bottom = 0
-        else:
-            return 0, 0, 0, 0
+            if outputChannels > 1:
+                output = output[:, :inputRows, :inputCols]
+            else:
+                output = output[:inputRows, :inputCols]
 
-        return p_left, p_right, p_top, p_bottom
+        return output
 
+    def kernel2matrix(self, K, outputShape):
+        wRows = np.product(K.shape)
+        wCols = np.product(outputShape)
+        k, W = np.zeros(5), np.zeros((wRows, wCols))
+        k[:2], k[3:5] = K[0, :], K[1, :]
+        W[0, :5], W[1, 1:6], W[2, 3:8], W[3, 4:] = k, k, k, k
+        return W
 
 class Conv2D():
     def __init__(self, kernel, stride=(1, 1)):
@@ -86,23 +122,23 @@ class Conv2D():
         inputHeight = dataIn.shape[0]
         inputWidth = dataIn.shape[1]
 
-        print("Kernel Height:", kernelHeight)
-        print("Kernel Width:", kernelWidth)
-
-        print("Data Height:", dataIn.shape[0])
-        print("Data Width:", dataIn.shape[1])
+        # print("Kernel Height:", kernelHeight)
+        # print("Kernel Width:", kernelWidth)
+        #
+        # print("Data Height:", dataIn.shape[0])
+        # print("Data Width:", dataIn.shape[1])
 
         outHeight = int((inputHeight-kernelHeight) / verticalStrideSize)+1
         outWidth = int((inputWidth-kernelWidth) / horizontalStrideSize)+1
 
-        print("Out Height:", outHeight)
-        print("Out Width:", outWidth)
+        # print("Out Height:", outHeight)
+        # print("Out Width:", outWidth)
 
         verticalStrideCount = int(outHeight/verticalStrideSize)
         horizontalStrideCount = int(outWidth/horizontalStrideSize)
 
-        print("Vertical stride count:", verticalStrideCount)
-        print("Horizontal stride count:", horizontalStrideCount)
+        # print("Vertical stride count:", verticalStrideCount)
+        # print("Horizontal stride count:", horizontalStrideCount)
 
         outputArray = np.zeros((outHeight, outWidth))
 
