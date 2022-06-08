@@ -23,19 +23,25 @@ class Conv2DTranspose():
         inputCols = self.X.shape[1]
 
         outputChannels = self.channels
-        outputRows = inputRows + kernelHeight - 1
-        outputCols = inputCols + kernelWidth - 1
+        if self.padding == "valid":
+            outputRows = self.strides[0] * (inputRows-1) + kernelHeight #- 2*padding[0]
+            outputCols = self.strides[1] * (inputCols-1) + kernelWidth #- 2*padding[1]
+        else:
+            outputRows = inputRows * self.strides[0]
+            outputCols = inputCols * self.strides[1]
+
         if outputChannels > 1:
             output = np.zeros([outputChannels, outputRows, outputCols])
         else:
             output = np.zeros([outputRows, outputCols])
-        # print("Output: \n {}".format(output))
+        print("Output shape: \n {}".format(output.shape))
 
         # Generate Sparse Convolutional Matrix
+        #TODO: this entire process should be refactored into a method
         matrixShape = (inputCols * inputRows, outputRows * outputCols)
-        print("shape", matrixShape)
+        # print("shape", matrixShape)
         sparseMatrix = np.zeros(matrixShape)
-        print(sparseMatrix)
+        # print(sparseMatrix)
 
         # build kernel vector that will be shifted across the sparse matrix
         # Note that since this is Transpose, everything is based on the output size
@@ -43,7 +49,8 @@ class Conv2DTranspose():
         numZerosBetweenRows = (outputCols - kernelWidth)
         numRows = kernelHeight - 1
         kernelVector = np.zeros(numKernelValues + numZerosBetweenRows * numRows)
-        print(kernelVector)
+        print(numKernelValues, numZerosBetweenRows, numRows)
+        print(kernelVector.shape)
         for row in range(kernelHeight):
             start = row * kernelWidth + row * numZerosBetweenRows
             end = start + kernelWidth
@@ -54,6 +61,7 @@ class Conv2DTranspose():
         # Fill the sparse Matrix
         numHorizontalStrides = int(outputCols - kernelWidth/self.strides[1])
 
+        #TODO: right now this will only work for a stride of 1
         h_strides = 0
         v_strides = 0
         for i in range(matrixShape[0]):
@@ -71,33 +79,33 @@ class Conv2DTranspose():
         # print(sparseMatrix)
 
         w = sparseMatrix #self.kernel2matrix(self.W, (outputRows, outputCols))
-        print("w: \n {}".format(w.shape))
-        # # print("scipy: \n {}".format(csr_matrix(self.W, shape=(outputRows, outputCols)).toarray()))
+        # print("w: \n {}".format(w.shape))
         # print("X: \n {}".format(self.X))
-        print("Output: \n {}".format((w.T @ self.X.reshape(-1)).reshape(outputRows, outputCols)))
+        print("Output result: \n {}".format((w.T @ self.X.reshape(-1)).reshape(outputRows, outputCols).shape))
+        # print("Output: \n {}".format((w.T @ self.X.reshape(-1)).reshape(outputRows, outputCols)))
 
 
-        # Calculate the output
-        for c in range(outputChannels):
-            # print("Channel: \n {}".format(self.W[c, :, :]))
-            for i in range(inputRows):
-                for j in range(inputCols):
-                    if outputChannels > 1:
-                        out = self.X[i, j] * self.W[c, :, :]
-                        output[c, i: i + kernelHeight, j: j + kernelWidth] += out
-                    else:
-                        out = self.X[i, j] * self.W
-                        output[i: i + kernelHeight, j: j + kernelWidth] += out
-            # print("Output: \n {}".format(output))
-
-        # Add padding
-        if self.padding == "same":
-            if outputChannels > 1:
-                output = output[:, :inputRows, :inputCols]
-            else:
-                output = output[:inputRows, :inputCols]
-
-        return output
+        # # Calculate the output
+        # for c in range(outputChannels):
+        #     # print("Channel: \n {}".format(self.W[c, :, :]))
+        #     for i in range(inputRows):
+        #         for j in range(inputCols):
+        #             if outputChannels > 1:
+        #                 out = self.X[i, j] * self.W[c, :, :]
+        #                 output[c, i: i + kernelHeight, j: j + kernelWidth] += out
+        #             else:
+        #                 out = self.X[i, j] * self.W
+        #                 output[i: i + kernelHeight, j: j + kernelWidth] += out
+        #     # print("Output: \n {}".format(output))
+        #
+        # # Add padding
+        # if self.padding == "same":
+        #     if outputChannels > 1:
+        #         output = output[:, :inputRows, :inputCols]
+        #     else:
+        #         output = output[:inputRows, :inputCols]
+        #
+        # return output
 
     def kernel2matrix(self, K, outputShape):
         wRows = np.product(K.shape)
