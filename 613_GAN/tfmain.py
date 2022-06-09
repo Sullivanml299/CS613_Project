@@ -17,6 +17,7 @@ def make_generator_model():
     model = tf.keras.Sequential()
     model.add(layers.Dense(8 * 8 * 256, use_bias=False, input_shape=(100,)))
     # model.add(layers.BatchNormalization())
+    print(model.output_shape)
     model.add(layers.LeakyReLU())
 
     model.add(layers.Reshape((8, 8, 256)))
@@ -94,12 +95,17 @@ def train_step(images):
     gradients_of_discriminator = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
 
     generator_optimizer.apply_gradients(zip(gradients_of_generator, generator.trainable_variables))
+
     discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator, discriminator.trainable_variables))
 
 
 def train(dataset, epochs):
     for epoch in range(epochs):
         start = time.time()
+
+        # Show weights
+        print(generator.layers[9])
+        print(generator.layers[9].get_weights())
 
         for image_batch in dataset:
             train_step(image_batch)

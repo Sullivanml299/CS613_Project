@@ -1,3 +1,4 @@
+import math
 import os
 import pickle
 import numpy as np
@@ -5,6 +6,7 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from scipy import linalg
 
 
 def imageToCSV():
@@ -58,3 +60,23 @@ def restorePickleArr():
     arr = pickle.load(file)
     # print(arr.shape)
     return arr
+
+def FID(X, Y):
+    print("TEST")
+    mu_x = np.mean(X)
+    mu_y = np.mean(Y)
+    print("mu_X:", mu_x, "mu_Y:", mu_y)
+
+    ssdiff = np.sum((mu_x - mu_y)**2.0)
+
+    cov_x = np.cov(X, rowvar=False)
+    cov_y = np.cov(Y, rowvar=False)
+
+    covmean = linalg.sqrtm(cov_x.dot(cov_y))
+
+    if np.iscomplexobj(covmean):
+        covmean = covmean.real
+        # calculate score
+
+    fid = ssdiff + np.trace(cov_x + cov_y - 2.0 * covmean)
+    return fid
